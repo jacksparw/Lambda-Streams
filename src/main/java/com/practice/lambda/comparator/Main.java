@@ -7,7 +7,7 @@ public class Main {
     public static void main(String[] args) {
 
         Person p1 = new Person(10, "A", "B");
-        Person p2 = new Person(20, "X", "Y");
+        Person p2 = new Person(10, "X", "Y");
 
         Comparator<Person> compare = Comparator.comparing(Person::getAge)
                 .thenComparing(Person::getFirstName)
