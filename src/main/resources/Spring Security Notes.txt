@@ -1,0 +1,161 @@
+1) The <http> element is responsible for creating a FilterChainProxy and the filter beans which it uses.
+
+______________________________________________________________________________________________________________________________________________________________________
+
+
+2) <intercept-url pattern="/css/**" filters="none"/>
+
+You can do like above but it will remove all filter checks from these request. If you still want to access information on the current user or call secured methods during the request do like below.(call some filters on the request)
+
+ <intercept-url pattern="/css/**" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+ <intercept-url pattern="/css/**" access="permitAll"/>
+
+Note: 
+i) Using filters="none" operates by creating an empty filter chain in Spring Security's FilterChainProxy, whereas the access attributes are used to configure the FilterSecurityInterceptor in the single filter chain
+ii) If you have an access contraint for a sub-pattern of a pattern which has a filters="none" attribute, the access constraint will be ignored, even if it is listed first. 
+eg.
+<intercept-url pattern="/user/**" filters="none"/>
+<intercept-url pattern="/user/task/**" access="ROLE_USER"/> -- This will be ignored even if it is listed first
+ 
+iii) It isn't possible to apply a filters="none" attribute to the pattern /** since this is used by the namespace filter chain.
+
+
+______________________________________________________________________________________________________________________________________________________________________
+
+
+3) <intercept-url pattern="/**" access="isAuthenticated()" /> This say's that all the request should be authenticated before accesing the URL.
+    <intercept-url pattern="/pages/user*" access="hasAnyRole('ADMIN')" /> This will override the above configuration and allow access to only those users who has role ADMIN
+    <intercept-url pattern="/user/**" filters="IS_AUTHENTICATED_ANONYMOUSLY"/> This will agian override first configuration further allow access to any anonymous user
+
+Note : <intercept-url pattern="/**" access="isAuthenticated()" /> should be the last configuratoin for intercept-url-pattern
+
+
+______________________________________________________________________________________________________________________________________________________________________
+
+
+4) You can also use custom UserDetailsService
+
+<authentication-manager>
+	<authentication-provider user-service-ref='myUserDetailsService'/>
+</authentication-manager>
+
+e.g. 
+
+public class EmployeeDaoImpl implements EmployeeDAO, UserDetailsService  {
+ 
+    @Autowired
+    private SessionFactory sessionFactory;
+ 
+    @Override
+    public void addEmployee(EmployeeEntity employee) {
+        this.sessionFactory.getCurrentSession().save(employee);
+    }
+ 
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<EmployeeEntity> getAllEmployees() {
+        return this.sessionFactory.getCurrentSession().createQuery("from Employee").list();
+    }
+ 
+    @Override
+    public void deleteEmployee(Integer employeeId) {
+        EmployeeEntity employee = (EmployeeEntity) sessionFactory.getCurrentSession().load(
+                EmployeeEntity.class, employeeId);
+        if (null != employee) {
+            this.sessionFactory.getCurrentSession().delete(employee);
+        }
+    }
+ 
+    @SuppressWarnings("deprecation")
+    @Override
+    public UserDetails loadUserByUsername(String username)
+            throws UsernameNotFoundException, DataAccessException
+    {
+        System.out.println("Getting access details from employee dao !!");
+ 
+        // Ideally it should be fetched from database and populated instance of
+        // #org.springframework.security.core.userdetails.User should be returned from this method
+        UserDetails user = new User(username, "password", true, true, true, true, new GrantedAuthority[]{ new GrantedAuthorityImpl("ROLE_USER") });
+        return user;
+    }
+}
+
+cont..
+______________________________________________________________________________________________________________________________________________________________________
+
+
+5) You can aslo provide CustomAuthenticationProvider.
+
+<authentication-manager>
+	<authentication-provider ref='myAuthenticationProvider'/>
+</authentication-manager>
+
+e.g.
+
+public class CustomAuthenticationProvider implements AuthenticationProvider
+{
+	private Log log = LogFactory.getLog(getClass());
+
+	ILdapAuthenticationService service = null;
+
+	public ILdapAuthenticationService getService()
+	{
+		return service;
+	}
+
+	public void setService(ILdapAuthenticationService service)
+	{
+		this.service = service;
+	}
+
+	public CustomAuthenticationProvider()
+	{
+		log.info("CustomAuthenticationProvider / constuctor ");
+	}
+
+	@Override
+	public Authentication authenticate(Authentication authentication) throws AuthenticationException
+	{
+		log.info("CustomAuthenticationProvider / authenticate ");
+		Authentication auth = null;
+		authentication.getDetails();
+		String name = authentication.getName();
+		String password = authentication.getCredentials().toString();
+		List<GrantedAuthority> grantedAuths = new ArrayList<GrantedAuthority>();
+		if (service.validate(name, password))
+		{
+			String[] roles = service.getRoles(name);
+			if (roles != null)
+			{
+				for (String role : roles)
+				{
+					log.info("Adding role :" + role.toUpperCase());
+					grantedAuths.add(new GrantedAuthorityImpl(role.toUpperCase()));
+				}
+			}
+			log.info("CustomAuthenticationProvider / authenticate : user authenticated");
+			auth = new UsernamePasswordAuthenticationToken(name, password, grantedAuths);
+			return auth;
+		}
+		return null;
+	}
+
+	@Override
+	public boolean supports(Class<?> authentication)
+	{
+		return true;
+		//return authentication.equals(UsernamePasswordAuthenticationToken.class);
+
+	}
+
+}
+
+Authenticate method should return (new UsernamePasswordAuthenticationToken(name, password, grantedAuths)) Object and his object will be configured in the SecurityContext.
+
+cont..
+______________________________________________________________________________________________________________________________________________________________________
+
+
+
+
+

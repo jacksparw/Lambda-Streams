@@ -1,0 +1,7 @@
+docker run --name menu-service-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -p 3306:3306 -d mysql
+
+docker exec -it menu-service-mysql bash
+
+docker run -d -p 6379:6379 redis
+
+docker run -d --name my-axon-server -p 8024:8024 -p 8124:8124 --hostname axonserver -e AXONSERVER_HOSTNAME=axonserver axoniq/axonserver
