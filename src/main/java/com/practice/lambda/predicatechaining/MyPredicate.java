@@ -1,4 +1,4 @@
-package com.practice.lambda.predicateChaining;
+package com.practice.lambda.predicatechaining;
 
 @FunctionalInterface
 public interface MyPredicate<T> {

@@ -1,4 +1,4 @@
-package com.practice.lambda.predicateChaining;
+package com.practice.lambda.predicatechaining;
 
 public class Main {
 
@@ -11,6 +11,7 @@ public class Main {
 
         System.out.println(myPredicate3.test("Hi"));
         System.out.println(myPredicate3.test("Hi How are you"));
-        System.out.println(myPredicate3.test("Hi How are you, I am fine"));
+        System.out.println(myPredicate3.test("Hi How " +
+                "are you, I am fine"));
     }
 }
